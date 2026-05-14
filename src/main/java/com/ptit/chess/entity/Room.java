@@ -35,6 +35,10 @@ public class Room {
     @Builder.Default
     private RoomStatus status = RoomStatus.WAITING;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer timeControl = 600;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

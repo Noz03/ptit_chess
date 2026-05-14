@@ -53,6 +53,7 @@ public class RoomController {
                 .roomCode(roomCode)
                 .hostPlayerId(host.getId())
                 .roomType(request.getRoomType() != null ? request.getRoomType() : RoomType.OPEN)
+                .timeControl(request.getTimeControl() != null ? request.getTimeControl() : 600)
                 .status(RoomStatus.WAITING)
                 .build();
 
@@ -62,6 +63,18 @@ public class RoomController {
         messagingTemplate.convertAndSend("/topic/lobby", "ROOM_CREATED"); // Broadcast to lobby if needed
 
         return ResponseEntity.ok(roomDto);
+    }
+
+    @GetMapping("/current")
+    public ResponseEntity<?> getCurrentRoom(Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Player player = userDetails.getAccount().getPlayer();
+
+        List<Room> activeRooms = roomRepository.findActiveRoomsByPlayerId(player.getId());
+        if (!activeRooms.isEmpty()) {
+            return ResponseEntity.ok(toRoomDto(activeRooms.get(0)));
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/lobby")
@@ -175,6 +188,7 @@ public class RoomController {
                 .guestDisplayName(guestName)
                 .roomType(room.getRoomType())
                 .status(room.getStatus())
+                .timeControl(room.getTimeControl())
                 .createdAt(room.getCreatedAt())
                 .build();
     }

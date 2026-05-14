@@ -6,4 +6,5 @@ import lombok.Data;
 @Data
 public class CreateRoomRequest {
     private RoomType roomType;
+    private Integer timeControl;
 }

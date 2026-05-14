@@ -18,5 +18,6 @@ public class RoomDto {
     private String guestDisplayName;
     private RoomType roomType;
     private RoomStatus status;
+    private Integer timeControl;
     private LocalDateTime createdAt;
 }

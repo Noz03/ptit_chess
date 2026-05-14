@@ -35,6 +35,9 @@ public class Match {
     @Column(columnDefinition = "TEXT")
     private String pgn;
 
+    @Column(nullable = false)
+    private Integer timeControl = 600; // seconds
+
     @Enumerated(EnumType.STRING)
     private MatchResult result;
 

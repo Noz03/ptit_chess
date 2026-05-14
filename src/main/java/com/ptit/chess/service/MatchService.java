@@ -60,6 +60,7 @@ public class MatchService {
                 .whitePlayerId(whitePlayerId)
                 .blackPlayerId(blackPlayerId)
                 .status(MatchStatus.IN_PROGRESS)
+                .timeControl(room.getTimeControl())
                 .pgn("") // Initial empty PGN
                 .build();
 
@@ -126,6 +127,7 @@ public class MatchService {
 
         Room room = roomRepository.findById(match.getRoomId()).orElse(null);
         if (room != null) {
+            room.setGuestPlayerId(null);
             room.setStatus(RoomStatus.WAITING);
             roomRepository.save(room);
         }
