@@ -13,4 +13,5 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
     boolean existsByDisplayName(String displayName);
     List<Player> findTop50ByOrderByEloDesc();
     long countByActivityStatusIn(List<com.ptit.chess.entity.ActivityStatus> statuses);
+    List<Player> findByActivityStatus(com.ptit.chess.entity.ActivityStatus status);
 }

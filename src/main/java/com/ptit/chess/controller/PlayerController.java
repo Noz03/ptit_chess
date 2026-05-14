@@ -62,6 +62,30 @@ public class PlayerController {
         return ResponseEntity.ok("Profile updated successfully");
     }
 
+    @GetMapping("/online")
+    public ResponseEntity<?> getOnlinePlayers(Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long currentUserId = userDetails.getAccount().getPlayer().getId();
+
+        List<Player> onlinePlayers = playerRepository.findByActivityStatus(com.ptit.chess.entity.ActivityStatus.ONLINE);
+        
+        List<PlayerProfileDto> dtos = onlinePlayers.stream()
+                .filter(p -> !p.getId().equals(currentUserId))
+                .map(p -> PlayerProfileDto.builder()
+                        .id(p.getId())
+                        .displayName(p.getDisplayName())
+                        .avatarUrl(p.getAvatarUrl())
+                        .elo(p.getElo())
+                        .winCount(p.getWinCount())
+                        .drawCount(p.getDrawCount())
+                        .lossCount(p.getLossCount())
+                        .activityStatus(p.getActivityStatus())
+                        .build())
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
+    }
+
     @GetMapping("/leaderboard")
     public ResponseEntity<?> getLeaderboard() {
         List<Player> topPlayers = playerRepository.findTop50ByOrderByEloDesc();

@@ -119,7 +119,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     localStorage.setItem('token', data.accessToken);
-                    window.location.href = '/profile';
+                    window.location.href = '/lobby';
                 } else {
                     showError('Login failed. Please check your credentials.');
                 }

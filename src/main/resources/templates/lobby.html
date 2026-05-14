@@ -57,6 +57,7 @@
                 
                 <div class="flex space-x-2">
                     <button id="leave-room-btn" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded text-sm shadow">Leave</button>
+                    <button id="invite-btn" class="flex-1 bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded text-sm shadow hidden">Invite</button>
                     <button id="start-game-btn" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded text-sm shadow hidden">Start Game</button>
                 </div>
             </div>
@@ -67,10 +68,13 @@
             <div class="bg-white rounded shadow-md p-6">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
                     <h2 class="text-2xl font-semibold text-gray-800">Open Rooms</h2>
-                    <span class="flex h-3 w-3 relative">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                    </span>
+                    <div class="flex items-center space-x-4">
+                        <input type="text" id="search-room-input" placeholder="Search by name or code..." class="border rounded px-3 py-1 text-sm shadow-sm focus:outline-none">
+                        <span class="flex h-3 w-3 relative">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                        </span>
+                    </div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="room-list">
@@ -83,6 +87,32 @@
                 <div id="lobby-loading" class="text-center py-10">
                     <p class="text-gray-500">Loading lobby...</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invite Modal -->
+    <div id="invite-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Invite Player</h2>
+                <button id="close-invite-modal" class="text-gray-500 hover:text-gray-800 font-bold">&times;</button>
+            </div>
+            <div id="online-players-list" class="max-h-60 overflow-y-auto space-y-2">
+                <!-- Players go here -->
+                <p class="text-gray-500 text-sm">Loading players...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incoming Invitation Modal -->
+    <div id="incoming-invite-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4 text-center">
+            <h2 class="text-xl font-bold mb-2">Game Invitation</h2>
+            <p class="mb-6"><span id="inviter-name" class="font-bold text-blue-600"></span> has invited you to a match!</p>
+            <div class="flex space-x-4">
+                <button id="accept-invite-btn" class="flex-1 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Accept</button>
+                <button id="reject-invite-btn" class="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Decline</button>
             </div>
         </div>
     </div>
@@ -109,6 +139,8 @@
             
             stompClient.connect({}, function (frame) {
                 console.log('Connected: ' + frame);
+                
+                loadMyProfile(); // Load profile to subscribe to personal channel
                 
                 // Subscribe to lobby updates
                 stompClient.subscribe('/topic/lobby', function (message) {
@@ -293,6 +325,13 @@
                 guestEl.classList.remove('text-gray-900');
             }
 
+            const inviteBtn = document.getElementById('invite-btn');
+            if (room.hostPlayerId === myPlayerId && room.status === 'WAITING') {
+                inviteBtn.classList.remove('hidden');
+            } else {
+                inviteBtn.classList.add('hidden');
+            }
+
             // Show start game button only if FULL and you are host (optional feature)
             // Just leaving it ready here.
         }
@@ -311,6 +350,130 @@
             localStorage.removeItem('token');
             if(stompClient) stompClient.disconnect();
             window.location.href = '/login';
+        });
+        
+        document.getElementById('search-room-input').addEventListener('keyup', function(e) {
+            const term = e.target.value.toLowerCase();
+            const cards = document.getElementById('room-list').children;
+            for (let i = 0; i < cards.length; i++) {
+                const text = cards[i].textContent.toLowerCase();
+                if (text.includes(term)) {
+                    cards[i].classList.remove('hidden');
+                } else {
+                    cards[i].classList.add('hidden');
+                }
+            }
+        });
+
+        // Invitation Logic
+        let myPlayerId = null;
+
+        async function loadMyProfile() {
+            try {
+                const res = await fetch('/api/player/profile', { headers: authHeaders });
+                const data = await res.json();
+                myPlayerId = data.id;
+
+                // Now subscribe to personal topic for invitations
+                stompClient.subscribe('/topic/player/' + myPlayerId, function(message) {
+                    const inv = JSON.parse(message.body);
+                    showIncomingInvitation(inv);
+                });
+            } catch(e) {}
+        }
+
+        document.getElementById('invite-btn').addEventListener('click', async () => {
+            document.getElementById('invite-modal').classList.remove('hidden');
+            const listEl = document.getElementById('online-players-list');
+            listEl.innerHTML = '<p class="text-gray-500 text-sm">Loading players...</p>';
+
+            try {
+                const res = await fetch('/api/player/online', { headers: authHeaders });
+                const players = await res.json();
+                
+                listEl.innerHTML = '';
+                if(players.length === 0) {
+                    listEl.innerHTML = '<p class="text-gray-500 text-sm">No other players online.</p>';
+                    return;
+                }
+
+                players.forEach(p => {
+                    const row = document.createElement('div');
+                    row.className = "flex justify-between items-center border-b py-2";
+                    row.innerHTML = `
+                        <div>
+                            <p class="font-semibold text-gray-800">${p.displayName}</p>
+                            <p class="text-xs text-gray-500">ELO: ${p.elo}</p>
+                        </div>
+                        <button onclick="sendInvitation(${p.id})" class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1 rounded text-sm transition">Invite</button>
+                    `;
+                    listEl.appendChild(row);
+                });
+            } catch(e) {
+                listEl.innerHTML = '<p class="text-red-500 text-sm">Error loading players.</p>';
+            }
+        });
+
+        document.getElementById('close-invite-modal').addEventListener('click', () => {
+            document.getElementById('invite-modal').classList.add('hidden');
+        });
+
+        async function sendInvitation(receiverId) {
+            try {
+                const res = await fetch('/api/invitations', {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({ receiverId, roomId: currentRoomId })
+                });
+                
+                if(res.ok) {
+                    alert("Invitation sent!");
+                    document.getElementById('invite-modal').classList.add('hidden');
+                } else {
+                    alert("Failed to send invitation.");
+                }
+            } catch(e) {
+                alert("Error sending invitation.");
+            }
+        }
+
+        let currentInvitationId = null;
+
+        function showIncomingInvitation(inv) {
+            currentInvitationId = inv.id;
+            document.getElementById('inviter-name').textContent = inv.senderName;
+            document.getElementById('incoming-invite-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('accept-invite-btn').addEventListener('click', async () => {
+            if(!currentInvitationId) return;
+            try {
+                const res = await fetch('/api/invitations/' + currentInvitationId + '/accept', {
+                    method: 'POST',
+                    headers: authHeaders
+                });
+                if(res.ok) {
+                    const data = await res.json();
+                    document.getElementById('incoming-invite-modal').classList.add('hidden');
+                    // Automatically join the room using the code
+                    joinRoom(data.roomCode);
+                } else {
+                    alert("Failed to accept invitation.");
+                }
+            } catch(e) {
+                alert("Error accepting invitation.");
+            }
+        });
+
+        document.getElementById('reject-invite-btn').addEventListener('click', async () => {
+            if(!currentInvitationId) return;
+            try {
+                await fetch('/api/invitations/' + currentInvitationId + '/reject', {
+                    method: 'POST',
+                    headers: authHeaders
+                });
+                document.getElementById('incoming-invite-modal').classList.add('hidden');
+            } catch(e) {}
         });
 
         // Initialize
