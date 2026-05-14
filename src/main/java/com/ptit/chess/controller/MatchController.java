@@ -29,7 +29,7 @@ public class MatchController {
 
     @GetMapping("/room/{roomId}")
     public ResponseEntity<?> getActiveMatchByRoom(@PathVariable Long roomId) {
-        Optional<Match> matchOpt = matchRepository.findByRoomIdAndStatus(roomId, MatchStatus.IN_PROGRESS);
+        Optional<Match> matchOpt = matchRepository.findFirstByRoomIdOrderByStartTimeDesc(roomId);
         if (matchOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -47,8 +47,12 @@ public class MatchController {
         response.put("blackPlayerName", blackPlayer != null ? blackPlayer.getDisplayName() : "Unknown");
         response.put("pgn", match.getPgn());
         response.put("status", match.getStatus());
-
         response.put("timeControl", match.getTimeControl());
+        
+        if (match.getStatus() == MatchStatus.FINISHED) {
+            response.put("result", match.getResult());
+            response.put("endReason", match.getEndReason());
+        }
 
         return ResponseEntity.ok(response);
     }

@@ -146,9 +146,15 @@
                     board.position(game.fen());
                 }
 
-                initTimer();
-                updateStatus();
-                connectWebSocket();
+                if (matchData.status === 'FINISHED') {
+                    document.getElementById('match-status').textContent = 'Finished';
+                    updateStatus();
+                    showEndgame(matchData.result, matchData.endReason);
+                } else {
+                    initTimer();
+                    updateStatus();
+                    connectWebSocket();
+                }
 
             } catch (error) {
                 console.error("Error loading match data:", error);
@@ -226,7 +232,11 @@
 
             // Illegal move
             if (move === null) {
-                showIllegalMoveToast();
+                if (game.in_check()) {
+                    showIllegalMoveToast("Lỗi sai luật / Đang bị chiếu!");
+                } else {
+                    showIllegalMoveToast("Lỗi sai luật / Illegal move!");
+                }
                 return 'snapback';
             }
 
@@ -234,8 +244,9 @@
             sendMove(move);
         }
 
-        function showIllegalMoveToast() {
+        function showIllegalMoveToast(message) {
             const toast = document.getElementById('illegal-move-toast');
+            toast.textContent = message;
             toast.classList.remove('opacity-0');
             toast.classList.add('opacity-100');
             setTimeout(() => {

@@ -11,5 +11,6 @@ import java.util.Optional;
 @Repository
 public interface MatchRepository extends JpaRepository<Match, Long> {
     Optional<Match> findByRoomIdAndStatus(Long roomId, MatchStatus status);
+    Optional<Match> findFirstByRoomIdOrderByStartTimeDesc(Long roomId);
     List<Match> findByWhitePlayerIdOrBlackPlayerId(Long whitePlayerId, Long blackPlayerId);
 }
