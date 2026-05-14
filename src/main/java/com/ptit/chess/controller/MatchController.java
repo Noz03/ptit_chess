@@ -47,6 +47,25 @@ public class MatchController {
         response.put("pgn", match.getPgn());
         response.put("status", match.getStatus());
 
+        response.put("timeControl", match.getTimeControl());
+
         return ResponseEntity.ok(response);
+    }
+
+    @Autowired
+    private com.ptit.chess.service.MatchService matchService;
+
+    @Autowired
+    private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+
+    @PostMapping("/room/{roomId}/rematch/{oldMatchId}")
+    public ResponseEntity<?> requestRematch(@PathVariable Long roomId, @PathVariable Long oldMatchId) {
+        try {
+            Match match = matchService.startMatch(roomId);
+            messagingTemplate.convertAndSend("/topic/match/" + oldMatchId, "MATCH_STARTED");
+            return ResponseEntity.ok("Rematch started");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

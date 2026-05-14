@@ -69,8 +69,8 @@
                             <input type="text" id="update-display-name" class="w-full border rounded p-2 text-sm">
                         </div>
                         <div class="mb-3">
-                            <label class="block text-xs text-gray-600 mb-1">Avatar URL</label>
-                            <input type="text" id="update-avatar-url" class="w-full border rounded p-2 text-sm">
+                            <label class="block text-xs text-gray-600 mb-1">Avatar Upload (Optional)</label>
+                            <input type="file" id="update-avatar-file" accept="image/*" class="w-full border rounded p-2 text-sm">
                         </div>
                         <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded text-sm w-full hover:bg-blue-600">Save</button>
                         <p id="update-msg" class="text-xs text-center mt-2"></p>
@@ -159,7 +159,6 @@
                 }
 
                 document.getElementById('update-display-name').value = profile.displayName;
-                document.getElementById('update-avatar-url').value = profile.avatarUrl || '';
 
             } catch (error) {
                 console.error('Error fetching profile:', error);
@@ -200,26 +199,50 @@
         document.getElementById('update-profile-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const displayName = document.getElementById('update-display-name').value;
-            const avatarUrl = document.getElementById('update-avatar-url').value;
+            const avatarFile = document.getElementById('update-avatar-file').files[0];
             const msgEl = document.getElementById('update-msg');
 
+            msgEl.textContent = "Updating...";
+            msgEl.className = "text-xs text-center mt-2 text-gray-500";
+
             try {
-                const response = await fetch('/api/player/profile', {
+                // 1. Update Display Name
+                let response = await fetch('/api/player/profile', {
                     method: 'PUT',
                     headers: authHeaders,
-                    body: JSON.stringify({ displayName, avatarUrl })
+                    body: JSON.stringify({ displayName })
                 });
 
-                if (response.ok) {
-                    msgEl.textContent = "Profile updated!";
-                    msgEl.className = "text-xs text-center mt-2 text-green-500";
-                    loadProfile();
-                    loadLeaderboard();
-                } else {
+                if (!response.ok) {
                     const text = await response.text();
                     msgEl.textContent = text || "Update failed.";
                     msgEl.className = "text-xs text-center mt-2 text-red-500";
+                    return;
                 }
+
+                // 2. Upload Avatar if selected
+                if (avatarFile) {
+                    const formData = new FormData();
+                    formData.append("file", avatarFile);
+
+                    const avatarRes = await fetch('/api/player/avatar', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }, // Do not set Content-Type for FormData
+                        body: formData
+                    });
+
+                    if (!avatarRes.ok) {
+                        msgEl.textContent = "Avatar upload failed.";
+                        msgEl.className = "text-xs text-center mt-2 text-red-500";
+                        return;
+                    }
+                }
+
+                msgEl.textContent = "Profile updated!";
+                msgEl.className = "text-xs text-center mt-2 text-green-500";
+                loadProfile();
+                loadLeaderboard();
+                
             } catch (error) {
                 msgEl.textContent = "An error occurred.";
                 msgEl.className = "text-xs text-center mt-2 text-red-500";

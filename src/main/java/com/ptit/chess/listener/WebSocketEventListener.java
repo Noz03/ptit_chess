@@ -59,4 +59,22 @@ public class WebSocketEventListener {
             }
         }
     }
+
+    @EventListener
+    public void handleWebSocketConnectListener(org.springframework.web.socket.messaging.SessionConnectedEvent event) {
+        StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
+        
+        if (headerAccessor.getUser() != null) {
+            Authentication auth = (Authentication) headerAccessor.getUser();
+            CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+            Long playerId = userDetails.getAccount().getPlayer().getId();
+
+            Optional<Player> optPlayer = playerRepository.findById(playerId);
+            if (optPlayer.isPresent()) {
+                Player player = optPlayer.get();
+                player.setActivityStatus(ActivityStatus.ONLINE);
+                playerRepository.save(player);
+            }
+        }
+    }
 }

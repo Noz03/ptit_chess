@@ -127,8 +127,7 @@ public class MatchService {
 
         Room room = roomRepository.findById(match.getRoomId()).orElse(null);
         if (room != null) {
-            room.setGuestPlayerId(null);
-            room.setStatus(RoomStatus.WAITING);
+            room.setStatus(RoomStatus.FULL); // Keep guest in room for potential rematch
             roomRepository.save(room);
         }
 

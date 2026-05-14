@@ -62,6 +62,39 @@ public class PlayerController {
         return ResponseEntity.ok("Profile updated successfully");
     }
 
+    @PostMapping("/avatar")
+    public ResponseEntity<?> uploadAvatar(@RequestParam("file") org.springframework.web.multipart.MultipartFile file, Authentication authentication) {
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Player player = userDetails.getAccount().getPlayer();
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("File is empty");
+        }
+
+        try {
+            // Ensure uploads directory exists
+            String uploadDir = "src/main/resources/static/uploads/";
+            java.io.File dir = new java.io.File(uploadDir);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // Save file
+            String filename = player.getId() + "_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            java.nio.file.Path filePath = java.nio.file.Paths.get(uploadDir + filename);
+            java.nio.file.Files.copy(file.getInputStream(), filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            // Update player
+            String avatarUrl = "/uploads/" + filename;
+            player.setAvatarUrl(avatarUrl);
+            playerRepository.save(player);
+
+            return ResponseEntity.ok(avatarUrl);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Failed to upload avatar");
+        }
+    }
+
     @GetMapping("/online")
     public ResponseEntity<?> getOnlinePlayers(Authentication authentication) {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();

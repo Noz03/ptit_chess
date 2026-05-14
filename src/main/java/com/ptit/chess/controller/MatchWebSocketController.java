@@ -72,4 +72,13 @@ public class MatchWebSocketController {
             matchService.endGame(matchId, MatchResult.DRAW, MatchEndReason.AGREED_DRAW); // Could be stalemate
         }
     }
+
+    @MessageMapping("/match/{matchId}/offer-rematch")
+    public void offerRematch(@DestinationVariable Long matchId, Authentication authentication) {
+        if (authentication == null) return;
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Player player = userDetails.getAccount().getPlayer();
+
+        messagingTemplate.convertAndSend("/topic/match/" + matchId, "REMATCH_OFFERED:" + player.getId());
+    }
 }
