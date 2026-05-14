@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Login & Register</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .hidden-form { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+    <div class="bg-white p-8 rounded shadow-md w-96">
+        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800" id="form-title">Login</h2>
+        
+        <!-- Login Form -->
+        <form id="login-form">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="login-username">Username</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="login-username" type="text" required>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="login-password">Password</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" id="login-password" type="password" required>
+            </div>
+            <div class="flex items-center justify-between">
+                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full" type="submit">
+                    Sign In
+                </button>
+            </div>
+            <p class="text-center text-sm text-gray-600 mt-4">
+                Don't have an account? <a href="#" id="show-register" class="text-blue-500">Register</a>
+            </p>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" class="hidden-form">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="reg-username">Username</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="reg-username" type="text" required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="reg-displayName">Display Name</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="reg-displayName" type="text" required>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="reg-password">Password</label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" id="reg-password" type="password" required>
+            </div>
+            <div class="flex items-center justify-between">
+                <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full" type="submit">
+                    Register
+                </button>
+            </div>
+            <p class="text-center text-sm text-gray-600 mt-4">
+                Already have an account? <a href="#" id="show-login" class="text-blue-500">Login</a>
+            </p>
+        </form>
+
+        <div id="error-message" class="text-red-500 text-center text-sm mt-4 hidden"></div>
+        <div id="success-message" class="text-green-500 text-center text-sm mt-4 hidden"></div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const showRegisterBtn = document.getElementById('show-register');
+        const showLoginBtn = document.getElementById('show-login');
+        const formTitle = document.getElementById('form-title');
+        const errorMsg = document.getElementById('error-message');
+        const successMsg = document.getElementById('success-message');
+
+        function clearMessages() {
+            errorMsg.classList.add('hidden');
+            successMsg.classList.add('hidden');
+        }
+
+        function showError(msg) {
+            clearMessages();
+            errorMsg.textContent = msg;
+            errorMsg.classList.remove('hidden');
+        }
+
+        function showSuccess(msg) {
+            clearMessages();
+            successMsg.textContent = msg;
+            successMsg.classList.remove('hidden');
+        }
+
+        showRegisterBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginForm.classList.add('hidden-form');
+            registerForm.classList.remove('hidden-form');
+            formTitle.textContent = 'Register';
+            clearMessages();
+        });
+
+        showLoginBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            registerForm.classList.add('hidden-form');
+            loginForm.classList.remove('hidden-form');
+            formTitle.textContent = 'Login';
+            clearMessages();
+        });
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('token', data.accessToken);
+                    window.location.href = '/profile';
+                } else {
+                    showError('Login failed. Please check your credentials.');
+                }
+            } catch (error) {
+                showError('An error occurred. Please try again later.');
+            }
+        });
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('reg-username').value;
+            const displayName = document.getElementById('reg-displayName').value;
+            const password = document.getElementById('reg-password').value;
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, displayName, password })
+                });
+
+                if (response.ok) {
+                    showSuccess('Registration successful! Please login.');
+                    showLoginBtn.click();
+                } else {
+                    const text = await response.text();
+                    showError(text || 'Registration failed.');
+                }
+            } catch (error) {
+                showError('An error occurred. Please try again later.');
+            }
+        });
+    </script>
+</body>
+</html>

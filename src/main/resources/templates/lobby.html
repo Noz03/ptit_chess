@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Lobby</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    
+    <nav class="bg-white shadow-md mb-8">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-6">
+                <h1 class="text-xl font-bold text-gray-800">Chess App</h1>
+                <a href="/profile" class="text-gray-600 hover:text-gray-900">Profile</a>
+                <a href="/lobby" class="text-blue-600 font-semibold border-b-2 border-blue-600">Lobby</a>
+            </div>
+            <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Logout</button>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
+        
+        <!-- Controls -->
+        <div class="col-span-1 space-y-6">
+            <div class="bg-white rounded shadow-md p-6">
+                <h2 class="text-lg font-semibold mb-4 border-b pb-2">Actions</h2>
+                <button id="create-room-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded mb-4 shadow">
+                    Create Room
+                </button>
+                
+                <hr class="mb-4">
+                
+                <h3 class="text-sm font-semibold mb-2">Join with Code</h3>
+                <div class="flex space-x-2">
+                    <input type="text" id="room-code-input" placeholder="e.g. A1B2C3D4" class="w-full border rounded px-3 py-2 text-sm uppercase">
+                    <button id="join-code-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow">Join</button>
+                </div>
+                <p id="action-msg" class="text-xs text-red-500 mt-2 text-center"></p>
+            </div>
+            
+            <div id="current-room-panel" class="bg-blue-50 border border-blue-200 rounded shadow-md p-6 hidden">
+                <h2 class="text-lg font-bold text-blue-800 mb-2">Current Room</h2>
+                <p class="text-sm text-gray-700 mb-1">Code: <span id="current-room-code" class="font-mono font-bold text-lg"></span></p>
+                <p class="text-sm text-gray-700 mb-4">Status: <span id="current-room-status" class="font-semibold"></span></p>
+                
+                <div class="flex items-center justify-between bg-white p-2 rounded border mb-2">
+                    <span class="text-xs text-gray-500">Host</span>
+                    <span id="current-room-host" class="font-semibold text-sm"></span>
+                </div>
+                <div class="flex items-center justify-between bg-white p-2 rounded border mb-4">
+                    <span class="text-xs text-gray-500">Guest</span>
+                    <span id="current-room-guest" class="font-semibold text-sm italic text-gray-400">Waiting...</span>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button id="leave-room-btn" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded text-sm shadow">Leave</button>
+                    <button id="start-game-btn" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded text-sm shadow hidden">Start Game</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lobby List -->
+        <div class="col-span-1 md:col-span-3">
+            <div class="bg-white rounded shadow-md p-6">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h2 class="text-2xl font-semibold text-gray-800">Open Rooms</h2>
+                    <span class="flex h-3 w-3 relative">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="room-list">
+                    <!-- Rooms go here -->
+                </div>
+                
+                <div id="lobby-empty" class="text-center py-10 hidden">
+                    <p class="text-gray-500">No open rooms available. Create one to start playing!</p>
+                </div>
+                <div id="lobby-loading" class="text-center py-10">
+                    <p class="text-gray-500">Loading lobby...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        const authHeaders = {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        };
+
+        let stompClient = null;
+        let currentRoomId = null;
+        let currentRoomSubscription = null;
+
+        function connectWebSocket() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.debug = null; // Disable debug logging
+            
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+                
+                // Subscribe to lobby updates
+                stompClient.subscribe('/topic/lobby', function (message) {
+                    loadLobbyRooms(); // Reload list on update
+                });
+            }, function(error) {
+                console.error("STOMP error:", error);
+                setTimeout(connectWebSocket, 5000);
+            });
+        }
+
+        async function loadLobbyRooms() {
+            try {
+                const response = await fetch('/api/rooms/lobby', { headers: authHeaders });
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                const rooms = await response.json();
+                
+                document.getElementById('lobby-loading').classList.add('hidden');
+                const listEl = document.getElementById('room-list');
+                const emptyEl = document.getElementById('lobby-empty');
+                
+                listEl.innerHTML = '';
+                
+                if (rooms.length === 0) {
+                    emptyEl.classList.remove('hidden');
+                } else {
+                    emptyEl.classList.add('hidden');
+                    rooms.forEach(room => {
+                        const card = document.createElement('div');
+                        card.className = "border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow bg-gray-50 flex flex-col justify-between";
+                        card.innerHTML = `
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-bold bg-blue-100 text-blue-800 px-2 py-1 rounded">#${room.roomCode}</span>
+                                    <span class="text-xs font-semibold text-green-600 animate-pulse">WAITING</span>
+                                </div>
+                                <p class="text-gray-800 font-medium mb-1 truncate">${room.hostDisplayName}'s Room</p>
+                            </div>
+                            <button onclick="joinRoom('${room.roomCode}')" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white py-1 rounded text-sm transition-colors">
+                                Join Game
+                            </button>
+                        `;
+                        listEl.appendChild(card);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching lobby:', error);
+            }
+        }
+
+        async function createRoom() {
+            const msgEl = document.getElementById('action-msg');
+            msgEl.textContent = '';
+            
+            try {
+                const response = await fetch('/api/rooms', {
+                    method: 'POST',
+                    headers: authHeaders,
+                    body: JSON.stringify({ roomType: 'OPEN' })
+                });
+
+                if (response.ok) {
+                    const room = await response.json();
+                    enterRoomState(room);
+                } else {
+                    const text = await response.text();
+                    msgEl.textContent = text || "Failed to create room.";
+                }
+            } catch (error) {
+                msgEl.textContent = "An error occurred.";
+            }
+        }
+
+        async function joinRoom(roomCode) {
+            const msgEl = document.getElementById('action-msg');
+            msgEl.textContent = '';
+            
+            if(!roomCode) return;
+            roomCode = roomCode.trim().toUpperCase();
+
+            try {
+                const response = await fetch('/api/rooms/join/' + roomCode, {
+                    method: 'POST',
+                    headers: authHeaders
+                });
+
+                if (response.ok) {
+                    const room = await response.json();
+                    enterRoomState(room);
+                } else {
+                    const text = await response.text();
+                    msgEl.textContent = text || "Failed to join room.";
+                }
+            } catch (error) {
+                msgEl.textContent = "An error occurred.";
+            }
+        }
+
+        async function leaveRoom() {
+            if(!currentRoomId) return;
+            
+            try {
+                const response = await fetch('/api/rooms/' + currentRoomId + '/leave', {
+                    method: 'POST',
+                    headers: authHeaders
+                });
+
+                if (response.ok) {
+                    exitRoomState();
+                }
+            } catch (error) {
+                console.error("Error leaving room:", error);
+            }
+        }
+
+        function subscribeToCurrentRoom(roomId) {
+            if(currentRoomSubscription) {
+                currentRoomSubscription.unsubscribe();
+            }
+            if(stompClient && stompClient.connected) {
+                currentRoomSubscription = stompClient.subscribe('/topic/room/' + roomId, function(message) {
+                    if (message.body === 'MATCH_STARTED') {
+                        window.location.href = '/match/' + roomId;
+                        return;
+                    }
+                    try {
+                        const roomData = JSON.parse(message.body);
+                        updateRoomUI(roomData);
+                    } catch(e) {}
+                });
+            } else {
+                setTimeout(() => subscribeToCurrentRoom(roomId), 500);
+            }
+        }
+
+        function enterRoomState(room) {
+            currentRoomId = room.id;
+            document.getElementById('current-room-panel').classList.remove('hidden');
+            document.getElementById('create-room-btn').disabled = true;
+            document.getElementById('join-code-btn').disabled = true;
+            
+            updateRoomUI(room);
+            subscribeToCurrentRoom(room.id);
+        }
+
+        function exitRoomState() {
+            currentRoomId = null;
+            if(currentRoomSubscription) {
+                currentRoomSubscription.unsubscribe();
+                currentRoomSubscription = null;
+            }
+            document.getElementById('current-room-panel').classList.add('hidden');
+            document.getElementById('create-room-btn').disabled = false;
+            document.getElementById('join-code-btn').disabled = false;
+            
+            loadLobbyRooms(); // refresh in case it was closed
+        }
+
+        function updateRoomUI(room) {
+            if (room.status === 'CLOSED') {
+                alert("Room has been closed by the host.");
+                exitRoomState();
+                return;
+            }
+
+            document.getElementById('current-room-code').textContent = room.roomCode;
+            document.getElementById('current-room-status').textContent = room.status;
+            document.getElementById('current-room-host').textContent = room.hostDisplayName || 'Unknown';
+            
+            const guestEl = document.getElementById('current-room-guest');
+            if (room.guestPlayerId) {
+                guestEl.textContent = room.guestDisplayName;
+                guestEl.classList.remove('italic', 'text-gray-400');
+                guestEl.classList.add('text-gray-900');
+            } else {
+                guestEl.textContent = 'Waiting...';
+                guestEl.classList.add('italic', 'text-gray-400');
+                guestEl.classList.remove('text-gray-900');
+            }
+
+            // Show start game button only if FULL and you are host (optional feature)
+            // Just leaving it ready here.
+        }
+
+        // Event Listeners
+        document.getElementById('create-room-btn').addEventListener('click', createRoom);
+        
+        document.getElementById('join-code-btn').addEventListener('click', () => {
+            const code = document.getElementById('room-code-input').value;
+            joinRoom(code);
+        });
+
+        document.getElementById('leave-room-btn').addEventListener('click', leaveRoom);
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('token');
+            if(stompClient) stompClient.disconnect();
+            window.location.href = '/login';
+        });
+
+        // Initialize
+        connectWebSocket();
+        loadLobbyRooms();
+
+    </script>
+</body>
+</html>

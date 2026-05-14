@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Chess</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex">
+
+    <!-- Sidebar -->
+    <div class="w-64 bg-gray-800 text-white min-h-screen p-4 flex flex-col">
+        <h1 class="text-2xl font-bold mb-8 text-center border-b border-gray-700 pb-4">Admin Panel</h1>
+        
+        <nav class="flex-1 space-y-2">
+            <a href="#" class="block px-4 py-2 bg-gray-700 rounded transition-colors">Dashboard</a>
+            <!-- Links for other sections could go here -->
+        </nav>
+
+        <div class="border-t border-gray-700 pt-4 mt-auto">
+            <button id="logout-btn" class="w-full bg-red-500 hover:bg-red-600 px-4 py-2 rounded font-semibold transition-colors">Logout</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 p-8 overflow-y-auto">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6">System Overview</h2>
+        
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Total Accounts</p>
+                <p id="stat-total-accounts" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Locked Accounts</p>
+                <p id="stat-locked-accounts" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Online Players</p>
+                <p id="stat-online-players" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Open Rooms</p>
+                <p id="stat-open-rooms" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
+                <p class="text-gray-500 text-sm font-semibold uppercase">Total Matches</p>
+                <p id="stat-total-matches" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+        </div>
+
+        <!-- Two Columns: Users and Matches -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            
+            <!-- Users Table -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">User Management</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
+                                <th class="p-3 border-b">ID</th>
+                                <th class="p-3 border-b">Username</th>
+                                <th class="p-3 border-b">Display Name</th>
+                                <th class="p-3 border-b">ELO</th>
+                                <th class="p-3 border-b">Status</th>
+                                <th class="p-3 border-b text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            <!-- User rows go here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Matches Table -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Matches</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
+                                <th class="p-3 border-b">Match ID</th>
+                                <th class="p-3 border-b">Players (W vs B)</th>
+                                <th class="p-3 border-b">Result</th>
+                                <th class="p-3 border-b">Reason</th>
+                                <th class="p-3 border-b text-center">PGN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matches-tbody">
+                            <!-- Match rows go here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/login';
+
+        const authHeaders = {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+        };
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/admin/stats', { headers: authHeaders });
+                if (res.status === 403 || res.status === 401) {
+                    alert("Unauthorized access!");
+                    window.location.href = '/profile';
+                    return;
+                }
+                const stats = await res.json();
+                document.getElementById('stat-total-accounts').textContent = stats.totalAccounts;
+                document.getElementById('stat-locked-accounts').textContent = stats.lockedAccounts;
+                document.getElementById('stat-online-players').textContent = stats.onlinePlayers;
+                document.getElementById('stat-open-rooms').textContent = stats.openRooms;
+                document.getElementById('stat-total-matches').textContent = stats.totalMatches;
+            } catch(e) { console.error("Error loading stats:", e); }
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/admin/accounts', { headers: authHeaders });
+                const users = await res.json();
+                
+                const tbody = document.getElementById('users-tbody');
+                tbody.innerHTML = '';
+
+                users.forEach(u => {
+                    const statusClass = u.status === 'ACTIVE' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
+                    const actionBtn = u.status === 'ACTIVE' 
+                        ? `<button onclick="toggleStatus(${u.id}, 'LOCKED')" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">Lock</button>`
+                        : `<button onclick="toggleStatus(${u.id}, 'ACTIVE')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded">Unlock</button>`;
+
+                    const row = document.createElement('tr');
+                    row.className = "border-b hover:bg-gray-50 text-sm";
+                    row.innerHTML = `
+                        <td class="p-3 font-semibold text-gray-700">${u.id}</td>
+                        <td class="p-3 text-gray-600">${u.username}</td>
+                        <td class="p-3 text-gray-800 font-medium">${u.displayName}</td>
+                        <td class="p-3 font-bold text-blue-600">${u.elo}</td>
+                        <td class="p-3">
+                            <span class="px-2 py-1 rounded text-xs font-semibold ${statusClass}">${u.status}</span>
+                        </td>
+                        <td class="p-3 text-center">
+                            ${u.role === 'ADMIN' ? '<span class="text-xs text-gray-400">Admin</span>' : actionBtn}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch(e) { console.error("Error loading users:", e); }
+        }
+
+        async function loadMatches() {
+            try {
+                const res = await fetch('/api/admin/matches', { headers: authHeaders });
+                const matches = await res.json();
+                
+                const tbody = document.getElementById('matches-tbody');
+                tbody.innerHTML = '';
+
+                // Sort by ID desc
+                matches.sort((a,b) => b.id - a.id);
+
+                matches.forEach(m => {
+                    const row = document.createElement('tr');
+                    row.className = "border-b hover:bg-gray-50 text-sm";
+                    
+                    const pgnBtn = m.pgn ? `<button onclick="alert('${m.pgn}')" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">View</button>` : '-';
+                    
+                    row.innerHTML = `
+                        <td class="p-3 font-semibold text-gray-700">#${m.id}</td>
+                        <td class="p-3 text-gray-800">${m.whitePlayerId} vs ${m.blackPlayerId}</td>
+                        <td class="p-3 font-bold">${m.result || '-'}</td>
+                        <td class="p-3 text-gray-600">${m.endReason || '-'}</td>
+                        <td class="p-3 text-center">${pgnBtn}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch(e) { console.error("Error loading matches:", e); }
+        }
+
+        async function toggleStatus(accountId, newStatus) {
+            if(!confirm(`Are you sure you want to change this account's status to ${newStatus}?`)) return;
+
+            try {
+                const res = await fetch('/api/admin/accounts/' + accountId + '/status', {
+                    method: 'PUT',
+                    headers: authHeaders,
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if(res.ok) {
+                    loadStats();
+                    loadUsers();
+                } else {
+                    alert("Failed to update status.");
+                }
+            } catch(e) {
+                alert("An error occurred.");
+            }
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        });
+
+        // Init
+        loadStats();
+        loadUsers();
+        loadMatches();
+    </script>
+</body>
+</html>
