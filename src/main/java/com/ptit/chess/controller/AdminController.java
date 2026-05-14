@@ -104,7 +104,71 @@ public class AdminController {
     @GetMapping("/matches")
     public ResponseEntity<?> getAllMatches() {
         List<Match> matches = matchRepository.findAll();
-        // Returning raw entity list for simplicity, but in a real app we'd map to a DTO
+        matches.sort((a, b) -> b.getId().compareTo(a.getId()));
         return ResponseEntity.ok(matches);
+    }
+
+    @GetMapping("/matches/search")
+    public ResponseEntity<?> searchMatches(
+            @RequestParam(required = false) String result,
+            @RequestParam(required = false) String reason) {
+        List<Match> matches = matchRepository.findAll();
+        matches.sort((a, b) -> b.getId().compareTo(a.getId()));
+        return ResponseEntity.ok(matches.stream().filter(m -> {
+            boolean ok = true;
+            if (result != null && !result.isEmpty()) {
+                ok = ok && m.getResult() != null && m.getResult().name().equalsIgnoreCase(result);
+            }
+            if (reason != null && !reason.isEmpty()) {
+                ok = ok && m.getEndReason() != null && m.getEndReason().name().equalsIgnoreCase(reason);
+            }
+            return ok;
+        }).collect(Collectors.toList()));
+    }
+
+    @PutMapping("/accounts/{id}/role")
+    public ResponseEntity<?> changeAccountRole(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        com.ptit.chess.entity.Account account = accountRepository.findById(id).orElse(null);
+        if (account == null) return ResponseEntity.notFound().build();
+        String newRole = body.get("role");
+        try {
+            account.setRole(com.ptit.chess.entity.Role.valueOf(newRole));
+            accountRepository.save(account);
+            return ResponseEntity.ok("Role updated");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid role: " + newRole);
+        }
+    }
+
+    @GetMapping("/rooms")
+    public ResponseEntity<?> getActiveRooms() {
+        return ResponseEntity.ok(roomRepository.findAll().stream()
+            .filter(r -> r.getStatus() != RoomStatus.CLOSED)
+            .map(r -> {
+                java.util.Map<String, Object> map = new java.util.HashMap<>();
+                map.put("id", r.getId());
+                map.put("name", r.getRoomCode());
+                map.put("status", r.getStatus());
+                map.put("roomType", r.getRoomType());
+                map.put("timeControl", r.getTimeControl());
+                map.put("hostPlayerId", r.getHostPlayerId());
+                map.put("guestPlayerId", r.getGuestPlayerId());
+                return map;
+            }).collect(Collectors.toList()));
+    }
+
+    @GetMapping("/players/online")
+    public ResponseEntity<?> getOnlinePlayers() {
+        return ResponseEntity.ok(playerRepository.findAll().stream()
+            .filter(p -> p.getActivityStatus() == ActivityStatus.ONLINE || p.getActivityStatus() == ActivityStatus.PLAYING)
+            .map(p -> {
+                java.util.Map<String, Object> map = new java.util.HashMap<>();
+                map.put("id", p.getId());
+                map.put("displayName", p.getDisplayName());
+                map.put("avatarUrl", p.getAvatarUrl());
+                map.put("elo", p.getElo());
+                map.put("activityStatus", p.getActivityStatus());
+                return map;
+            }).collect(Collectors.toList()));
     }
 }

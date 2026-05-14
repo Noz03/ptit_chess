@@ -1,210 +1,349 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Chess</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-btn { @apply px-4 py-2 text-sm font-semibold rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-800; }
+        .tab-btn.active { border-color: #7c3aed; color: #7c3aed; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .badge-active { @apply bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold; }
+        .badge-locked { @apply bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold; }
+        .badge-admin { @apply bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold; }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex">
 
     <!-- Sidebar -->
-    <div class="w-64 bg-gray-800 text-white min-h-screen p-4 flex flex-col">
-        <h1 class="text-2xl font-bold mb-8 text-center border-b border-gray-700 pb-4">Admin Panel</h1>
-        
-        <nav class="flex-1 space-y-2">
-            <a href="#" class="block px-4 py-2 bg-gray-700 rounded transition-colors">Dashboard</a>
-            <!-- Links for other sections could go here -->
+    <div class="w-56 bg-gray-900 text-white min-h-screen flex flex-col flex-shrink-0">
+        <div class="p-5 border-b border-gray-700">
+            <h1 class="text-lg font-bold">⚙ Admin Panel</h1>
+            <p class="text-xs text-gray-400 mt-1">Chess Management</p>
+        </div>
+        <nav class="flex-1 p-3 space-y-1 mt-2">
+            <button onclick="showTab('overview')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">📊 Tổng quan</button>
+            <button onclick="showTab('accounts')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">👥 Tài khoản</button>
+            <button onclick="showTab('monitor')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">🔍 Vận hành</button>
+            <button onclick="showTab('matches')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">♟ Trận đấu</button>
         </nav>
-
-        <div class="border-t border-gray-700 pt-4 mt-auto">
-            <button id="logout-btn" class="w-full bg-red-500 hover:bg-red-600 px-4 py-2 rounded font-semibold transition-colors">Logout</button>
+        <div class="p-4 border-t border-gray-700">
+            <a href="/lobby" class="block text-center text-xs text-gray-400 mb-2 hover:text-white">← Lobby</a>
+            <button id="logout-btn" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded text-sm font-semibold">Đăng xuất</button>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="flex-1 p-8 overflow-y-auto">
-        <h2 class="text-3xl font-bold text-gray-800 mb-6">System Overview</h2>
-        
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-blue-500">
-                <p class="text-gray-500 text-sm font-semibold uppercase">Total Accounts</p>
-                <p id="stat-total-accounts" class="text-2xl font-bold text-gray-800">0</p>
+    <!-- Main -->
+    <div class="flex-1 p-6 overflow-y-auto">
+
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-panel active">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">📊 Thống kê hệ thống</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                <div class="bg-white p-5 rounded-xl shadow border-t-4 border-blue-500">
+                    <p class="text-xs text-gray-500 uppercase font-semibold">Tổng tài khoản</p>
+                    <p id="stat-total-accounts" class="text-3xl font-bold text-gray-800 mt-1">-</p>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow border-t-4 border-red-500">
+                    <p class="text-xs text-gray-500 uppercase font-semibold">Tài khoản khóa</p>
+                    <p id="stat-locked-accounts" class="text-3xl font-bold text-gray-800 mt-1">-</p>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow border-t-4 border-green-500">
+                    <p class="text-xs text-gray-500 uppercase font-semibold">Người đang online</p>
+                    <p id="stat-online-players" class="text-3xl font-bold text-gray-800 mt-1">-</p>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow border-t-4 border-yellow-500">
+                    <p class="text-xs text-gray-500 uppercase font-semibold">Phòng đang mở</p>
+                    <p id="stat-open-rooms" class="text-3xl font-bold text-gray-800 mt-1">-</p>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow border-t-4 border-purple-500">
+                    <p class="text-xs text-gray-500 uppercase font-semibold">Tổng trận đấu</p>
+                    <p id="stat-total-matches" class="text-3xl font-bold text-gray-800 mt-1">-</p>
+                </div>
             </div>
-            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
-                <p class="text-gray-500 text-sm font-semibold uppercase">Locked Accounts</p>
-                <p id="stat-locked-accounts" class="text-2xl font-bold text-gray-800">0</p>
+            <button onclick="loadStats()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded">🔄 Làm mới</button>
+        </div>
+
+        <!-- Accounts Tab -->
+        <div id="tab-accounts" class="tab-panel">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">👥 Quản lý tài khoản</h2>
+                <button onclick="loadUsers()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded">🔄 Làm mới</button>
             </div>
-            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-green-500">
-                <p class="text-gray-500 text-sm font-semibold uppercase">Online Players</p>
-                <p id="stat-online-players" class="text-2xl font-bold text-gray-800">0</p>
-            </div>
-            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-500">
-                <p class="text-gray-500 text-sm font-semibold uppercase">Open Rooms</p>
-                <p id="stat-open-rooms" class="text-2xl font-bold text-gray-800">0</p>
-            </div>
-            <div class="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
-                <p class="text-gray-500 text-sm font-semibold uppercase">Total Matches</p>
-                <p id="stat-total-matches" class="text-2xl font-bold text-gray-800">0</p>
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
+                        <tr>
+                            <th class="px-4 py-3">ID</th>
+                            <th class="px-4 py-3">Username</th>
+                            <th class="px-4 py-3">Tên hiển thị</th>
+                            <th class="px-4 py-3">ELO</th>
+                            <th class="px-4 py-3">Role</th>
+                            <th class="px-4 py-3">Trạng thái</th>
+                            <th class="px-4 py-3 text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody" class="divide-y divide-gray-100"></tbody>
+                </table>
             </div>
         </div>
 
-        <!-- Two Columns: Users and Matches -->
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            
-            <!-- Users Table -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">User Management</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
-                                <th class="p-3 border-b">ID</th>
-                                <th class="p-3 border-b">Username</th>
-                                <th class="p-3 border-b">Display Name</th>
-                                <th class="p-3 border-b">ELO</th>
-                                <th class="p-3 border-b">Status</th>
-                                <th class="p-3 border-b text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-tbody">
-                            <!-- User rows go here -->
-                        </tbody>
-                    </table>
+        <!-- Monitor Tab -->
+        <div id="tab-monitor" class="tab-panel">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">🔍 Theo dõi vận hành</h2>
+                <button onclick="loadMonitor()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded">🔄 Làm mới</button>
+            </div>
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <!-- Online players -->
+                <div class="bg-white rounded-xl shadow p-5">
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">🟢 Người chơi đang online</h3>
+                    <div id="online-players-list" class="space-y-2 max-h-80 overflow-y-auto"></div>
+                </div>
+                <!-- Active rooms -->
+                <div class="bg-white rounded-xl shadow p-5">
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">🚪 Phòng đang hoạt động</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+                                <tr>
+                                    <th class="px-3 py-2">Tên phòng</th>
+                                    <th class="px-3 py-2">Loại</th>
+                                    <th class="px-3 py-2">Trạng thái</th>
+                                    <th class="px-3 py-2">TG</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rooms-tbody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Matches Table -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Recent Matches</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
-                                <th class="p-3 border-b">Match ID</th>
-                                <th class="p-3 border-b">Players (W vs B)</th>
-                                <th class="p-3 border-b">Result</th>
-                                <th class="p-3 border-b">Reason</th>
-                                <th class="p-3 border-b text-center">PGN</th>
-                            </tr>
-                        </thead>
-                        <tbody id="matches-tbody">
-                            <!-- Match rows go here -->
-                        </tbody>
-                    </table>
-                </div>
+        <!-- Matches Tab -->
+        <div id="tab-matches" class="tab-panel">
+            <div class="flex flex-wrap items-center gap-3 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mr-auto">♟ Lịch sử trận đấu</h2>
+                <select id="filter-result" class="border rounded px-3 py-2 text-sm">
+                    <option value="">Tất cả kết quả</option>
+                    <option value="WHITE_WIN">Trắng thắng</option>
+                    <option value="BLACK_WIN">Đen thắng</option>
+                    <option value="DRAW">Hòa</option>
+                </select>
+                <select id="filter-reason" class="border rounded px-3 py-2 text-sm">
+                    <option value="">Tất cả lý do</option>
+                    <option value="CHECKMATE">Chiếu bí</option>
+                    <option value="RESIGN">Đầu hàng</option>
+                    <option value="TIMEOUT">Hết giờ</option>
+                    <option value="AGREED_DRAW">Hòa thỏa thuận</option>
+                </select>
+                <button onclick="loadMatches()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded">🔍 Tìm kiếm</button>
             </div>
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
+                        <tr>
+                            <th class="px-4 py-3">#</th>
+                            <th class="px-4 py-3">Trắng</th>
+                            <th class="px-4 py-3">Đen</th>
+                            <th class="px-4 py-3">Kết quả</th>
+                            <th class="px-4 py-3">Lý do</th>
+                            <th class="px-4 py-3">Thời gian</th>
+                            <th class="px-4 py-3 text-center">PGN</th>
+                        </tr>
+                    </thead>
+                    <tbody id="matches-tbody" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+        </div>
 
+    </div>
+
+    <!-- PGN Modal -->
+    <div id="pgn-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">Chi tiết PGN</h3>
+                <button onclick="document.getElementById('pgn-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <textarea id="pgn-content" class="w-full h-64 border rounded p-3 font-mono text-sm bg-gray-50" readonly></textarea>
         </div>
     </div>
 
     <script>
         const token = localStorage.getItem('token');
-        if (!token) window.location.href = '/login';
+        if (!token) { window.location.href = '/login'; }
 
-        const authHeaders = {
-            'Authorization': 'Bearer ' + token,
-            'Content-Type': 'application/json'
-        };
+        // Check admin role
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload.role !== 'ROLE_ADMIN') { window.location.href = '/lobby'; }
+        } catch(e) { window.location.href = '/login'; }
 
+        const authHeaders = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+        // Tab navigation
+        let currentTab = 'overview';
+        function showTab(tab) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-purple-700', 'text-white'));
+            currentTab = tab;
+            if (tab === 'overview') loadStats();
+            if (tab === 'accounts') loadUsers();
+            if (tab === 'monitor') loadMonitor();
+            if (tab === 'matches') loadMatches();
+        }
+
+        // Stats
         async function loadStats() {
             try {
                 const res = await fetch('/api/admin/stats', { headers: authHeaders });
-                if (res.status === 403 || res.status === 401) {
-                    alert("Unauthorized access!");
-                    window.location.href = '/profile';
-                    return;
-                }
-                const stats = await res.json();
-                document.getElementById('stat-total-accounts').textContent = stats.totalAccounts;
-                document.getElementById('stat-locked-accounts').textContent = stats.lockedAccounts;
-                document.getElementById('stat-online-players').textContent = stats.onlinePlayers;
-                document.getElementById('stat-open-rooms').textContent = stats.openRooms;
-                document.getElementById('stat-total-matches').textContent = stats.totalMatches;
-            } catch(e) { console.error("Error loading stats:", e); }
+                if (res.status === 403) { window.location.href = '/lobby'; return; }
+                const s = await res.json();
+                document.getElementById('stat-total-accounts').textContent = s.totalAccounts;
+                document.getElementById('stat-locked-accounts').textContent = s.lockedAccounts;
+                document.getElementById('stat-online-players').textContent = s.onlinePlayers;
+                document.getElementById('stat-open-rooms').textContent = s.openRooms;
+                document.getElementById('stat-total-matches').textContent = s.totalMatches;
+            } catch(e) { console.error(e); }
         }
 
+        // Users
+        let allUsers = [];
         async function loadUsers() {
             try {
                 const res = await fetch('/api/admin/accounts', { headers: authHeaders });
-                const users = await res.json();
-                
-                const tbody = document.getElementById('users-tbody');
-                tbody.innerHTML = '';
-
-                users.forEach(u => {
-                    const statusClass = u.status === 'ACTIVE' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100';
-                    const actionBtn = u.status === 'ACTIVE' 
-                        ? `<button onclick="toggleStatus(${u.id}, 'LOCKED')" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">Lock</button>`
-                        : `<button onclick="toggleStatus(${u.id}, 'ACTIVE')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded">Unlock</button>`;
-
-                    const row = document.createElement('tr');
-                    row.className = "border-b hover:bg-gray-50 text-sm";
-                    row.innerHTML = `
-                        <td class="p-3 font-semibold text-gray-700">${u.id}</td>
-                        <td class="p-3 text-gray-600">${u.username}</td>
-                        <td class="p-3 text-gray-800 font-medium">${u.displayName}</td>
-                        <td class="p-3 font-bold text-blue-600">${u.elo}</td>
-                        <td class="p-3">
-                            <span class="px-2 py-1 rounded text-xs font-semibold ${statusClass}">${u.status}</span>
-                        </td>
-                        <td class="p-3 text-center">
-                            ${u.role === 'ADMIN' ? '<span class="text-xs text-gray-400">Admin</span>' : actionBtn}
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-            } catch(e) { console.error("Error loading users:", e); }
+                allUsers = await res.json();
+                renderUsers(allUsers);
+            } catch(e) { console.error(e); }
         }
 
+        function renderUsers(users) {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '';
+            users.forEach(u => {
+                const statusBadge = u.status === 'ACTIVE'
+                    ? `<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-bold">ACTIVE</span>`
+                    : `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">LOCKED</span>`;
+                const roleBadge = u.role === 'ADMIN'
+                    ? `<span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">ADMIN</span>`
+                    : `<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs font-bold">PLAYER</span>`;
+                const lockBtn = u.status === 'ACTIVE'
+                    ? `<button onclick="toggleStatus(${u.id},'LOCKED')" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded mr-1">Khóa</button>`
+                    : `<button onclick="toggleStatus(${u.id},'ACTIVE')" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded mr-1">Mở</button>`;
+                const roleBtn = u.role === 'ADMIN'
+                    ? `<button onclick="changeRole(${u.id},'PLAYER')" class="text-xs bg-orange-500 hover:bg-orange-600 text-white px-2 py-1 rounded">→Player</button>`
+                    : `<button onclick="changeRole(${u.id},'ADMIN')" class="text-xs bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 rounded">→Admin</button>`;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-gray-500">${u.id}</td>
+                    <td class="px-4 py-3 font-medium">${u.username}</td>
+                    <td class="px-4 py-3">${u.displayName || '-'}</td>
+                    <td class="px-4 py-3 font-bold text-blue-600">${u.elo}</td>
+                    <td class="px-4 py-3">${roleBadge}</td>
+                    <td class="px-4 py-3">${statusBadge}</td>
+                    <td class="px-4 py-3 text-center space-x-1">${lockBtn}${roleBtn}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function toggleStatus(id, newStatus) {
+            if (!confirm(`Đổi trạng thái tài khoản #${id} thành ${newStatus}?`)) return;
+            const res = await fetch(`/api/admin/accounts/${id}/status`, {
+                method: 'PUT', headers: authHeaders, body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) { loadUsers(); loadStats(); } else alert('Thất bại!');
+        }
+
+        async function changeRole(id, newRole) {
+            if (!confirm(`Đổi role tài khoản #${id} thành ${newRole}?`)) return;
+            const res = await fetch(`/api/admin/accounts/${id}/role`, {
+                method: 'PUT', headers: authHeaders, body: JSON.stringify({ role: newRole })
+            });
+            if (res.ok) { loadUsers(); } else alert('Thất bại!');
+        }
+
+        // Monitor
+        async function loadMonitor() {
+            try {
+                const [playersRes, roomsRes] = await Promise.all([
+                    fetch('/api/admin/players/online', { headers: authHeaders }),
+                    fetch('/api/admin/rooms', { headers: authHeaders })
+                ]);
+                const players = await playersRes.json();
+                const rooms = await roomsRes.json();
+
+                const playerList = document.getElementById('online-players-list');
+                playerList.innerHTML = players.length === 0 ? '<p class="text-gray-400 text-sm">Không có ai online</p>' : '';
+                players.forEach(p => {
+                    const avatar = p.avatarUrl
+                        ? `<img src="${p.avatarUrl}" class="w-8 h-8 rounded-full object-cover">`
+                        : `<div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">${(p.displayName||'?')[0]}</div>`;
+                    playerList.innerHTML += `<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                        ${avatar}
+                        <div><p class="font-medium text-sm">${p.displayName}</p><p class="text-xs text-gray-400">${p.elo} ELO · ${p.activityStatus}</p></div>
+                    </div>`;
+                });
+
+                const roomsTbody = document.getElementById('rooms-tbody');
+                roomsTbody.innerHTML = rooms.length === 0 ? '<tr><td colspan="4" class="px-3 py-4 text-center text-gray-400">Không có phòng</td></tr>' : '';
+                rooms.forEach(r => {
+                    const statusColors = { WAITING: 'text-green-600', FULL: 'text-yellow-600', PLAYING: 'text-blue-600' };
+                    roomsTbody.innerHTML += `<tr class="hover:bg-gray-50">
+                        <td class="px-3 py-2 font-medium">${r.name}</td>
+                        <td class="px-3 py-2 text-xs">${r.roomType}</td>
+                        <td class="px-3 py-2 text-xs font-bold ${statusColors[r.status]||''}">${r.status}</td>
+                        <td class="px-3 py-2 text-xs">${Math.floor(r.timeControl/60)}p</td>
+                    </tr>`;
+                });
+            } catch(e) { console.error(e); }
+        }
+
+        // Matches
         async function loadMatches() {
             try {
-                const res = await fetch('/api/admin/matches', { headers: authHeaders });
+                const result = document.getElementById('filter-result').value;
+                const reason = document.getElementById('filter-reason').value;
+                let url = '/api/admin/matches/search?';
+                if (result) url += 'result=' + result + '&';
+                if (reason) url += 'reason=' + reason;
+                const res = await fetch(url, { headers: authHeaders });
                 const matches = await res.json();
-                
+
                 const tbody = document.getElementById('matches-tbody');
                 tbody.innerHTML = '';
-
-                // Sort by ID desc
-                matches.sort((a,b) => b.id - a.id);
-
+                if (matches.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">Không tìm thấy trận đấu</td></tr>';
+                    return;
+                }
                 matches.forEach(m => {
-                    const row = document.createElement('tr');
-                    row.className = "border-b hover:bg-gray-50 text-sm";
-                    
-                    const pgnBtn = m.pgn ? `<button onclick="alert('${m.pgn}')" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">View</button>` : '-';
-                    
-                    row.innerHTML = `
-                        <td class="p-3 font-semibold text-gray-700">#${m.id}</td>
-                        <td class="p-3 text-gray-800">${m.whitePlayerId} vs ${m.blackPlayerId}</td>
-                        <td class="p-3 font-bold">${m.result || '-'}</td>
-                        <td class="p-3 text-gray-600">${m.endReason || '-'}</td>
-                        <td class="p-3 text-center">${pgnBtn}</td>
-                    `;
-                    tbody.appendChild(row);
+                    const resultColors = { WHITE_WIN: 'text-yellow-600', BLACK_WIN: 'text-gray-700', DRAW: 'text-blue-600' };
+                    const resultText = { WHITE_WIN: 'Trắng thắng', BLACK_WIN: 'Đen thắng', DRAW: 'Hòa' };
+                    const reasonText = { CHECKMATE: 'Chiếu bí', RESIGN: 'Đầu hàng', TIMEOUT: 'Hết giờ', AGREED_DRAW: 'Hòa thỏa thuận' };
+                    const pgnBtn = m.pgn ? `<button onclick="showPgn(${JSON.stringify(m.pgn).replace(/'/g,'\\&apos;')})" class="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded">Xem</button>` : '<span class="text-gray-300">-</span>';
+                    const startTime = m.startTime ? new Date(m.startTime).toLocaleString('vi-VN') : '-';
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50';
+                    tr.innerHTML = `
+                        <td class="px-4 py-3 text-gray-500 font-mono">#${m.id}</td>
+                        <td class="px-4 py-3 text-sm">${m.whitePlayerId}</td>
+                        <td class="px-4 py-3 text-sm">${m.blackPlayerId}</td>
+                        <td class="px-4 py-3 font-bold text-sm ${resultColors[m.result]||''}">${resultText[m.result] || (m.result||'-')}</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">${reasonText[m.endReason] || (m.endReason||'-')}</td>
+                        <td class="px-4 py-3 text-xs text-gray-500">${startTime}</td>
+                        <td class="px-4 py-3 text-center">${pgnBtn}</td>`;
+                    tbody.appendChild(tr);
                 });
-            } catch(e) { console.error("Error loading matches:", e); }
+            } catch(e) { console.error(e); }
         }
 
-        async function toggleStatus(accountId, newStatus) {
-            if(!confirm(`Are you sure you want to change this account's status to ${newStatus}?`)) return;
-
-            try {
-                const res = await fetch('/api/admin/accounts/' + accountId + '/status', {
-                    method: 'PUT',
-                    headers: authHeaders,
-                    body: JSON.stringify({ status: newStatus })
-                });
-                if(res.ok) {
-                    loadStats();
-                    loadUsers();
-                } else {
-                    alert("Failed to update status.");
-                }
-            } catch(e) {
-                alert("An error occurred.");
-            }
+        function showPgn(pgn) {
+            document.getElementById('pgn-content').value = pgn || '(Chưa có nước đi)';
+            document.getElementById('pgn-modal').classList.remove('hidden');
         }
 
         document.getElementById('logout-btn').addEventListener('click', () => {
@@ -212,10 +351,8 @@
             window.location.href = '/login';
         });
 
-        // Init
+        // Auto-load overview
         loadStats();
-        loadUsers();
-        loadMatches();
     </script>
 </body>
 </html>
