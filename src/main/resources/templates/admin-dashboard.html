@@ -20,14 +20,14 @@
     <!-- Sidebar -->
     <div class="w-56 bg-gray-900 text-white min-h-screen flex flex-col flex-shrink-0">
         <div class="p-5 border-b border-gray-700">
-            <h1 class="text-lg font-bold">⚙ Admin Panel</h1>
-            <p class="text-xs text-gray-400 mt-1">Chess Management</p>
+            <a href="/lobby" class="text-lg font-extrabold text-white tracking-tight">PTIT CHESS</a>
+            <p class="text-xs text-gray-400 mt-1">Admin Panel</p>
         </div>
         <nav class="flex-1 p-3 space-y-1 mt-2">
-            <button onclick="showTab('overview')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">📊 Tổng quan</button>
-            <button onclick="showTab('accounts')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">👥 Tài khoản</button>
-            <button onclick="showTab('monitor')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">🔍 Vận hành</button>
-            <button onclick="showTab('matches')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">♟ Trận đấu</button>
+            <button onclick="showTab('overview')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">Tổng quan</button>
+            <button onclick="showTab('accounts')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">Tài khoản</button>
+            <button onclick="showTab('monitor')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">Vận hành</button>
+            <button onclick="showTab('matches')" class="nav-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-700 flex items-center gap-2">Trận đấu</button>
         </nav>
         <div class="p-4 border-t border-gray-700">
             <a href="/lobby" class="block text-center text-xs text-gray-400 mb-2 hover:text-white">← Lobby</a>
@@ -40,7 +40,7 @@
 
         <!-- Overview Tab -->
         <div id="tab-overview" class="tab-panel active">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">📊 Thống kê hệ thống</h2>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Thống kê hệ thống</h2>
             <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <div class="bg-white p-5 rounded-xl shadow border-t-4 border-blue-500">
                     <p class="text-xs text-gray-500 uppercase font-semibold">Tổng tài khoản</p>
@@ -69,7 +69,7 @@
         <!-- Accounts Tab -->
         <div id="tab-accounts" class="tab-panel">
             <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">👥 Quản lý tài khoản</h2>
+                <h2 class="text-2xl font-bold text-gray-800">Quản lý tài khoản</h2>
                 <button onclick="loadUsers()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded">🔄 Làm mới</button>
             </div>
             <div class="bg-white rounded-xl shadow overflow-hidden">
@@ -93,18 +93,18 @@
         <!-- Monitor Tab -->
         <div id="tab-monitor" class="tab-panel">
             <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">🔍 Theo dõi vận hành</h2>
+                <h2 class="text-2xl font-bold text-gray-800">Theo dõi vận hành</h2>
                 <button onclick="loadMonitor()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded">🔄 Làm mới</button>
             </div>
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <!-- Online players -->
                 <div class="bg-white rounded-xl shadow p-5">
-                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">🟢 Người chơi đang online</h3>
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Người chơi đang online</h3>
                     <div id="online-players-list" class="space-y-2 max-h-80 overflow-y-auto"></div>
                 </div>
                 <!-- Active rooms -->
                 <div class="bg-white rounded-xl shadow p-5">
-                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">🚪 Phòng đang hoạt động</h3>
+                    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2">Phòng đang hoạt động</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
@@ -125,7 +125,7 @@
         <!-- Matches Tab -->
         <div id="tab-matches" class="tab-panel">
             <div class="flex flex-wrap items-center gap-3 mb-6">
-                <h2 class="text-2xl font-bold text-gray-800 mr-auto">♟ Lịch sử trận đấu</h2>
+                <h2 class="text-2xl font-bold text-gray-800 mr-auto">Lịch sử trận đấu</h2>
                 <select id="filter-result" class="border rounded px-3 py-2 text-sm">
                     <option value="">Tất cả kết quả</option>
                     <option value="WHITE_WIN">Trắng thắng</option>

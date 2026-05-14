@@ -9,15 +9,47 @@
 <body class="bg-gray-100 min-h-screen">
     
     <nav class="bg-white shadow-md mb-8">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center space-x-6">
-                <h1 class="text-xl font-bold text-gray-800">Chess App</h1>
-                <a href="/profile" class="text-blue-600 font-semibold border-b-2 border-blue-600">Profile</a>
-                <a href="/lobby" class="text-gray-600 hover:text-gray-900">Lobby</a>
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <a href="/lobby" class="text-xl font-extrabold text-blue-700 tracking-tight">PTIT CHESS</a>
+                <a href="/lobby" class="text-gray-600 hover:text-gray-900 text-sm font-medium">Lobby</a>
+                <a id="admin-dashboard-link" href="/admin" class="hidden bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-3 py-1 rounded">Dashboard</a>
             </div>
-            <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Logout</button>
+            <div class="flex items-center space-x-3">
+                <a href="/profile" id="nav-avatar-link" title="Profile">
+                    <div id="nav-avatar" class="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold overflow-hidden cursor-pointer ring-2 ring-blue-300 hover:ring-blue-500 transition">
+                        <span id="nav-avatar-initials">?</span>
+                        <img id="nav-avatar-img" src="" alt="" class="hidden w-full h-full object-cover">
+                    </div>
+                </a>
+                <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm">Logout</button>
+            </div>
         </div>
     </nav>
+    <script>
+        (function() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.role === 'ROLE_ADMIN') {
+                    document.getElementById('admin-dashboard-link').classList.remove('hidden');
+                }
+            } catch(e) {}
+            fetch('/api/player/profile', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(r => r.ok ? r.json() : null)
+                .then(p => {
+                    if (!p) return;
+                    if (p.avatarUrl) {
+                        document.getElementById('nav-avatar-img').src = p.avatarUrl;
+                        document.getElementById('nav-avatar-img').classList.remove('hidden');
+                        document.getElementById('nav-avatar-initials').classList.add('hidden');
+                    } else if (p.displayName) {
+                        document.getElementById('nav-avatar-initials').textContent = p.displayName[0].toUpperCase();
+                    }
+                }).catch(() => {});
+        })();
+    </script>
 
     <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
         
