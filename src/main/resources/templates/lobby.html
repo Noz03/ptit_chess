@@ -137,7 +137,7 @@
             stompClient = Stomp.over(socket);
             stompClient.debug = null; // Disable debug logging
             
-            stompClient.connect({}, function (frame) {
+            stompClient.connect({ 'Authorization': 'Bearer ' + token }, function (frame) {
                 console.log('Connected: ' + frame);
                 
                 loadMyProfile(); // Load profile to subscribe to personal channel
